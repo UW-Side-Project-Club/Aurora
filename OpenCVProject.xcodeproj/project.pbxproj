@@ -16,6 +16,7 @@
 		137D7EBE2048D81B0072F0EB /* OpenCVProjectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137D7EBD2048D81B0072F0EB /* OpenCVProjectTests.swift */; };
 		137D7EC92048D81B0072F0EB /* OpenCVProjectUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137D7EC82048D81B0072F0EB /* OpenCVProjectUITests.swift */; };
 		137D7ED72048D9720072F0EB /* FrameExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137D7ED62048D9720072F0EB /* FrameExtractor.swift */; };
+		3D415EB22050CE58001AAB16 /* Amirali.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D415EB12050CE58001AAB16 /* Amirali.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +52,7 @@
 		137D7EC82048D81B0072F0EB /* OpenCVProjectUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCVProjectUITests.swift; sourceTree = "<group>"; };
 		137D7ECA2048D81B0072F0EB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		137D7ED62048D9720072F0EB /* FrameExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameExtractor.swift; sourceTree = "<group>"; };
+		3D415EB12050CE58001AAB16 /* Amirali.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Amirali.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,6 +111,7 @@
 				137D7EAF2048D81B0072F0EB /* Assets.xcassets */,
 				137D7EB12048D81B0072F0EB /* LaunchScreen.storyboard */,
 				137D7EB42048D81B0072F0EB /* Info.plist */,
+				3D415EB12050CE58001AAB16 /* Amirali.swift */,
 			);
 			path = OpenCVProject;
 			sourceTree = "<group>";
@@ -269,6 +272,7 @@
 				13278613204E195300B4C2AA /* Inceptionv3.mlmodel in Sources */,
 				137D7EAB2048D81B0072F0EB /* ViewController.swift in Sources */,
 				137D7EA92048D81B0072F0EB /* AppDelegate.swift in Sources */,
+				3D415EB22050CE58001AAB16 /* Amirali.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
