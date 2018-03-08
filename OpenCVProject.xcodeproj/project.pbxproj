@@ -16,11 +16,7 @@
 		137D7EBE2048D81B0072F0EB /* OpenCVProjectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137D7EBD2048D81B0072F0EB /* OpenCVProjectTests.swift */; };
 		137D7EC92048D81B0072F0EB /* OpenCVProjectUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137D7EC82048D81B0072F0EB /* OpenCVProjectUITests.swift */; };
 		137D7ED72048D9720072F0EB /* FrameExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137D7ED62048D9720072F0EB /* FrameExtractor.swift */; };
-<<<<<<< HEAD
-		71B614BC2050CE41009F2918 /* Darcy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B614BB2050CE41009F2918 /* Darcy.swift */; };
-=======
-		3D415EB22050CE58001AAB16 /* Amirali.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D415EB12050CE58001AAB16 /* Amirali.swift */; };
->>>>>>> 759d75b48f02327a7b6a4e3a78b766ae48036e96
+
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,11 +52,7 @@
 		137D7EC82048D81B0072F0EB /* OpenCVProjectUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCVProjectUITests.swift; sourceTree = "<group>"; };
 		137D7ECA2048D81B0072F0EB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		137D7ED62048D9720072F0EB /* FrameExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameExtractor.swift; sourceTree = "<group>"; };
-<<<<<<< HEAD
-		71B614BB2050CE41009F2918 /* Darcy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Darcy.swift; sourceTree = "<group>"; };
-=======
-		3D415EB12050CE58001AAB16 /* Amirali.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Amirali.swift; sourceTree = "<group>"; };
->>>>>>> 759d75b48f02327a7b6a4e3a78b766ae48036e96
+
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -119,11 +111,7 @@
 				137D7EAF2048D81B0072F0EB /* Assets.xcassets */,
 				137D7EB12048D81B0072F0EB /* LaunchScreen.storyboard */,
 				137D7EB42048D81B0072F0EB /* Info.plist */,
-<<<<<<< HEAD
-				71B614BB2050CE41009F2918 /* Darcy.swift */,
-=======
-				3D415EB12050CE58001AAB16 /* Amirali.swift */,
->>>>>>> 759d75b48f02327a7b6a4e3a78b766ae48036e96
+
 			);
 			path = OpenCVProject;
 			sourceTree = "<group>";
@@ -283,9 +271,7 @@
 				137D7ED72048D9720072F0EB /* FrameExtractor.swift in Sources */,
 				13278613204E195300B4C2AA /* Inceptionv3.mlmodel in Sources */,
 				137D7EAB2048D81B0072F0EB /* ViewController.swift in Sources */,
-				71B614BC2050CE41009F2918 /* Darcy.swift in Sources */,
 				137D7EA92048D81B0072F0EB /* AppDelegate.swift in Sources */,
-				3D415EB22050CE58001AAB16 /* Amirali.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
