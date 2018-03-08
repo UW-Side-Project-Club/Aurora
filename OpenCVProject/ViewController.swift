@@ -70,7 +70,7 @@ class ViewController: UIViewController, FrameExtractorDelegate {
             print("Response: \(String(describing: response))")
             let strData = NSString(data: data!, encoding: String.Encoding.utf8.rawValue)
             print("Body: \(String(describing: strData))")
-            self.describe(data: data!)
+            self.analyzeface(data: data!)
             
             
         })
@@ -95,9 +95,8 @@ class ViewController: UIViewController, FrameExtractorDelegate {
     func analyzeface(data : Data) {
         do {
             let decoder = JSONDecoder()
-            let response = try decoder.decode(APIResponse.self, from: data)
-            self.speak(text: "I see "+response.description.captions[0].text)
-            
+            let response = try decoder.decode(APIFace.self, from: data)
+            self.speak(text: "I see a"+String(response.faces[0].age)+"year old"+response.faces[0].gender)
             
         } catch {
             print("error parsing data")
