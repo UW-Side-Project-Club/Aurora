@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		13278613204E195300B4C2AA /* Inceptionv3.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 13278612204E195300B4C2AA /* Inceptionv3.mlmodel */; };
 		137D7EA92048D81B0072F0EB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137D7EA82048D81B0072F0EB /* AppDelegate.swift */; };
 		137D7EAB2048D81B0072F0EB /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137D7EAA2048D81B0072F0EB /* ViewController.swift */; };
 		137D7EAE2048D81B0072F0EB /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 137D7EAC2048D81B0072F0EB /* Main.storyboard */; };
@@ -14,6 +15,7 @@
 		137D7EB32048D81B0072F0EB /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 137D7EB12048D81B0072F0EB /* LaunchScreen.storyboard */; };
 		137D7EBE2048D81B0072F0EB /* OpenCVProjectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137D7EBD2048D81B0072F0EB /* OpenCVProjectTests.swift */; };
 		137D7EC92048D81B0072F0EB /* OpenCVProjectUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137D7EC82048D81B0072F0EB /* OpenCVProjectUITests.swift */; };
+		137D7ED72048D9720072F0EB /* FrameExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137D7ED62048D9720072F0EB /* FrameExtractor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +36,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		13278612204E195300B4C2AA /* Inceptionv3.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = Inceptionv3.mlmodel; sourceTree = "<group>"; };
 		137D7EA52048D81B0072F0EB /* OpenCVProject.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenCVProject.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		137D7EA82048D81B0072F0EB /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		137D7EAA2048D81B0072F0EB /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -47,6 +50,7 @@
 		137D7EC42048D81B0072F0EB /* OpenCVProjectUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenCVProjectUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		137D7EC82048D81B0072F0EB /* OpenCVProjectUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCVProjectUITests.swift; sourceTree = "<group>"; };
 		137D7ECA2048D81B0072F0EB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		137D7ED62048D9720072F0EB /* FrameExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameExtractor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,8 +101,10 @@
 		137D7EA72048D81B0072F0EB /* OpenCVProject */ = {
 			isa = PBXGroup;
 			children = (
+				13278612204E195300B4C2AA /* Inceptionv3.mlmodel */,
 				137D7EA82048D81B0072F0EB /* AppDelegate.swift */,
 				137D7EAA2048D81B0072F0EB /* ViewController.swift */,
+				137D7ED62048D9720072F0EB /* FrameExtractor.swift */,
 				137D7EAC2048D81B0072F0EB /* Main.storyboard */,
 				137D7EAF2048D81B0072F0EB /* Assets.xcassets */,
 				137D7EB12048D81B0072F0EB /* LaunchScreen.storyboard */,
@@ -259,6 +265,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				137D7ED72048D9720072F0EB /* FrameExtractor.swift in Sources */,
+				13278613204E195300B4C2AA /* Inceptionv3.mlmodel in Sources */,
 				137D7EAB2048D81B0072F0EB /* ViewController.swift in Sources */,
 				137D7EA92048D81B0072F0EB /* AppDelegate.swift in Sources */,
 			);
