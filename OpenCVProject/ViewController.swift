@@ -70,20 +70,39 @@ class ViewController: UIViewController, FrameExtractorDelegate {
             print("Response: \(String(describing: response))")
             let strData = NSString(data: data!, encoding: String.Encoding.utf8.rawValue)
             print("Body: \(String(describing: strData))")
-            // parse the result as JSON
-            do {
-                let decoder = JSONDecoder()
-                let response = try decoder.decode(APIResponse.self, from: data!)
-                self.speak(text: "I see "+response.description.captions[0].text)
-                
-                
-            } catch {
-                print("error parsing data")
-                return
-            }
+            self.describe(data: data!)
+            
+            
         })
         
         task.resume()
+    }
+    
+    func describe(data: Data) {
+        // parse the result as JSON
+        do {
+            let decoder = JSONDecoder()
+            let response = try decoder.decode(APIResponse.self, from: data)
+            self.speak(text: "I see "+response.description.captions[0].text)
+            
+            
+        } catch {
+            print("error parsing data")
+            return
+        }
+    }
+    
+    func analyzeface(data : Data) {
+        do {
+            let decoder = JSONDecoder()
+            let response = try decoder.decode(APIResponse.self, from: data)
+            self.speak(text: "I see "+response.description.captions[0].text)
+            
+            
+        } catch {
+            print("error parsing data")
+            return
+        }
     }
     
     func speak(text: String) {
@@ -154,3 +173,24 @@ struct APIResponse : Codable {
     let metadata: MetaData
 }
 
+struct APIFace : Codable {
+    struct MetaData : Codable {
+        let height: Int
+        let width: Int
+        let format: String
+    }
+    struct Faces : Codable {
+        let age: Int
+        let gender: String
+        struct FaceRectangle : Codable {
+            let left: Int
+            let top: Int
+            let width: Int
+            let height: Int
+        }
+        let faceRectangle : FaceRectangle
+    }
+    let faces : [Faces]
+    let requestId: String
+    let metadata: MetaData
+}
