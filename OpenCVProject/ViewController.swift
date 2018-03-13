@@ -27,6 +27,13 @@ class ViewController: UIViewController, FrameExtractorDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+        do {
+            try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback)
+            print("setcat")
+        }
+        catch {
+            // report for an error
+        }
         frameExtractor = FrameExtractor()
         frameExtractor.delegate = self
         
