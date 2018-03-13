@@ -81,6 +81,7 @@ class ViewController: UIViewController, FrameExtractorDelegate {
             //print("Response: \(String(describing: response))")
             let strData = NSString(data: data!, encoding: String.Encoding.utf8.rawValue)
             print("Body: \(String(describing: strData))")
+
             // parse the result as JSON
             do {
                 let decoder = JSONDecoder()
@@ -93,6 +94,7 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         })
         task.resume()
     }
+ 
     
     func analyzeFace(image: UIImage) {
         let request = self.postRequest(url: "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0/analyze?visualFeatures=Faces", image: image)
