@@ -37,9 +37,15 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         // Dispose of any resources that can be recreated.
     }
     
-    @IBAction func capPressed(_ sender: Any) {
-        postRequest(url: "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0/describe", image: imageView.image!)
+    @IBAction func flipCam(_ sender: Any) {
+        frameExtractor.flipCamera()
     }
+    
+    @IBAction func capPressed(_ sender: Any) {
+        describe(image: imageView.image!)
+        analyzeFace(image: imageView.image!)
+    }
+    
     func captured(image: UIImage) {
         imageView.image = image
       /*  let delay = DispatchTime.now() + .seconds(10)
@@ -58,51 +64,58 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         }
     }
     
-    func postRequest(url: String, image: UIImage) {
+    func postRequest(url: String, image: UIImage) -> URLRequest {
         var request = URLRequest(url: URL(string: url)!)
-        let session = URLSession.shared
         request.httpMethod = "POST"
         request.httpBody = UIImageJPEGRepresentation(image, 1)
         request.addValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
         request.addValue("5b12f0c970b0483896897cbfaa8672b1", forHTTPHeaderField: "Ocp-Apim-Subscription-Key")
         
+        return request
+    }
+    
+    func describe(image: UIImage) {
+        let request = self.postRequest(url: "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0/describe", image: image)
+        let session = URLSession.shared
         let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
-            print("Response: \(String(describing: response))")
+            //print("Response: \(String(describing: response))")
             let strData = NSString(data: data!, encoding: String.Encoding.utf8.rawValue)
             print("Body: \(String(describing: strData))")
-            self.describe(data: data!)
-            
-            
+            // parse the result as JSON
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(APIResponse.self, from: data!)
+                self.speak(text: "I see "+response.description.captions[0].text)
+            } catch {
+                print("error parsing data")
+                return
+            }
         })
-        
         task.resume()
     }
     
-    func describe(data: Data) {
-        // parse the result as JSON
-        do {
-            let decoder = JSONDecoder()
-            let response = try decoder.decode(APIResponse.self, from: data)
-            self.speak(text: "I see "+response.description.captions[0].text)
-            
-            
-        } catch {
-            print("error parsing data")
-            return
-        }
-    }
-    
-    func analyzeface(data : Data) {
-        do {
-            let decoder = JSONDecoder()
-            let response = try decoder.decode(APIResponse.self, from: data)
-            self.speak(text: "I see "+response.description.captions[0].text)
-            
-            
-        } catch {
-            print("error parsing data")
-            return
-        }
+    func analyzeFace(image: UIImage) {
+        let request = self.postRequest(url: "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0/analyze?visualFeatures=Faces", image: image)
+        let session = URLSession.shared
+        let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
+            //print("Response: \(String(describing: response))")
+            let strData = NSString(data: data!, encoding: String.Encoding.utf8.rawValue)
+            print("Body: \(String(describing: strData))")
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(APIFace.self, from: data!)
+                if !response.faces.isEmpty {
+                    for face in response.faces {
+                        let pn = face.gender == "Male" ? "he" : "she"
+                        self.speak(text: "I think "+pn+"is"+String(face.age)+"year old")
+                    }
+                }
+            } catch {
+                print("error parsing data")
+                return
+            }
+        })
+        task.resume()
     }
     
     func speak(text: String) {
@@ -124,7 +137,6 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         node.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
             self.request.append(buffer)
         }
-        print("else22")
         
         audioEngine.prepare()
         do {
@@ -132,9 +144,6 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         } catch {
             return print(error)
         }
-        
-        print("else24")
-        
         let recognizer = SFSpeechRecognizer()
         recognizer?.recognitionTask(with: self.request) { (results, error) in
             
@@ -194,3 +203,8 @@ struct APIFace : Codable {
     let requestId: String
     let metadata: MetaData
 }
+
+struct OCRResult: Codable {
+    
+}
+

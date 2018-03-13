@@ -17,7 +17,7 @@ protocol FrameExtractorDelegate: class {
 
 class FrameExtractor: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     
-    private let position = AVCaptureDevice.Position.back
+    private var position = AVCaptureDevice.Position.back
     private let quality = AVCaptureSession.Preset.high
     
     private var permissionGranted = false
@@ -148,6 +148,19 @@ class FrameExtractor: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         
         // executes request
         //try? VNImageRequestHandler(cvPixelBuffer: pixelBuffer, options: [:]).perform([request])
+    }
+    
+    public func flipCamera() {
+        sessionQueue.async { [unowned self] in
+            self.captureSession.beginConfiguration()
+            guard let currentCaptureInput = self.captureSession.inputs.first else { return }
+            self.captureSession.removeInput(currentCaptureInput)
+            guard let currentCaptureOutput = self.captureSession.outputs.first else { return }
+            self.captureSession.removeOutput(currentCaptureOutput)
+            self.position = self.position == .front ? .back : .front
+            self.configureSession()
+            self.captureSession.commitConfiguration()
+        }
     }
 }
 
