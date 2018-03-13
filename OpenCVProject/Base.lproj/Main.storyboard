@@ -29,6 +29,14 @@
                                     <action selector="capPressed:" destination="BYZ-38-t0r" eventType="touchUpInside" id="PR3-qx-gO0"/>
                                 </connections>
                             </button>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="44Z-FW-hKG">
+                                <rect key="frame" x="317" y="748" width="38" height="30"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="Swap"/>
+                                <connections>
+                                    <action selector="flipCam:" destination="BYZ-38-t0r" eventType="touchUpInside" id="4nJ-Ni-wrp"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
