@@ -49,8 +49,9 @@ class ViewController: UIViewController, FrameExtractorDelegate {
     }
     
     @IBAction func capPressed(_ sender: Any) {
-        describe(image: imageView.image!)
-        analyzeFace(image: imageView.image!)
+        //describe(image: imageView.image!)
+        //analyzeFace(image: imageView.image!)
+        OCR(image: imageView.image!)
     }
     
     func captured(image: UIImage) {
@@ -127,6 +128,37 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         task.resume()
     }
     
+    func OCR(image: UIImage){
+        let request = self.postRequest(url: "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0/ocr?en", image: image)
+        let session = URLSession.shared
+        let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
+            //print("Response: \(String(describing: response))")
+            let strData = NSString(data: data!, encoding: String.Encoding.utf8.rawValue)
+            print("Body: \(String(describing: strData))")
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(APIOCR.self, from: data!)
+                if !response.regions.isEmpty {
+                    for region in response.regions {
+                        for line in region.lines {
+                            var lineString = ""
+                            for word in line.words {
+                                lineString += word.text
+                            }
+                            self.speak(text: lineString)
+                        }
+                    }
+                }
+            } catch {
+                print("error parsing data")
+                return
+            }
+            
+        })
+            
+        task.resume()
+    }
+    
     func speak(text: String) {
         let synth = AVSpeechSynthesizer()
         let speech = AVSpeechUtterance(string: text )
@@ -186,6 +218,19 @@ struct APIResponse : Codable {
         let captions: [Captions]
     }
     
+    struct Faces : Codable {
+        let age: Int
+        let gender: String
+        struct FaceRectangle : Codable {
+            let left: Int
+            let top: Int
+            let width: Int
+            let height: Int
+        }
+        let faceRectangle : FaceRectangle
+    }
+    let faces : [Faces]
+    
     let description: Description
     let requestId: String
     let metadata: MetaData
@@ -213,7 +258,22 @@ struct APIFace : Codable {
     let metadata: MetaData
 }
 
-struct OCRResult: Codable {
-    
+struct APIOCR : Codable {
+    let language : String
+    let textAngle : Float
+    let orientation : String
+    struct region : Codable {
+        let boundingBox : String
+        struct line : Codable {
+            let boundingBox : String
+            struct word : Codable {
+                let boundingBox : String
+                let text : String
+            }
+            let words : [word]
+        }
+        let lines : [line]
+    }
+    let regions : [region]
 }
 
