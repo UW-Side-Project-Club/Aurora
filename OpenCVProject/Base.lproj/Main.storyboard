@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="13771" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
-    <device id="retina4_0" orientation="portrait">
+    <device id="retina5_9" orientation="portrait">
         <adaptation id="fullscreen"/>
     </device>
     <dependencies>
@@ -15,32 +15,29 @@
             <objects>
                 <viewController id="BYZ-38-t0r" customClass="ViewController" customModule="OpenCVProject" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
-                        <rect key="frame" x="0.0" y="0.0" width="320" height="568"/>
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="812"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="TfZ-d6-bKB">
+                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="TfZ-d6-bKB">
                                 <rect key="frame" x="0.0" y="0.0" width="375" height="812"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                             </imageView>
-                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="tWf-ds-Kfn">
-                                <rect key="frame" x="16" y="44" width="343" height="734"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="fuF-3R-xNc">
+                                <rect key="frame" x="0.0" y="44" width="375" height="734"/>
                                 <connections>
-                                    <action selector="capPressed:" destination="BYZ-38-t0r" eventType="touchUpInside" id="PR3-qx-gO0"/>
-                                </connections>
-                            </button>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="44Z-FW-hKG">
-                                <rect key="frame" x="262" y="538" width="38" height="30"/>
-                                <state key="normal" title="Swap"/>
-                                <connections>
-                                    <action selector="flipCam:" destination="BYZ-38-t0r" eventType="touchUpInside" id="4nJ-Ni-wrp"/>
+                                    <action selector="speakPressed:" destination="BYZ-38-t0r" eventType="touchUpInside" id="gOU-w3-v7P"/>
                                 </connections>
                             </button>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
-                            <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" secondItem="44Z-FW-hKG" secondAttribute="trailing" constant="20" id="ni8-vh-7ne"/>
-                            <constraint firstItem="44Z-FW-hKG" firstAttribute="bottom" secondItem="6Tk-OE-BBY" secondAttribute="bottom" id="rvV-sI-3g4"/>
+                            <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" secondItem="fuF-3R-xNc" secondAttribute="trailing" id="4Dr-qW-u1o"/>
+                            <constraint firstItem="fuF-3R-xNc" firstAttribute="top" secondItem="6Tk-OE-BBY" secondAttribute="top" id="Ayz-wc-FFg"/>
+                            <constraint firstAttribute="bottom" secondItem="TfZ-d6-bKB" secondAttribute="bottom" id="M1M-Nz-0NN"/>
+                            <constraint firstAttribute="trailing" secondItem="TfZ-d6-bKB" secondAttribute="trailing" id="VT6-Yp-MOD"/>
+                            <constraint firstItem="6Tk-OE-BBY" firstAttribute="bottom" secondItem="fuF-3R-xNc" secondAttribute="bottom" id="Yv7-lS-Zc9"/>
+                            <constraint firstItem="TfZ-d6-bKB" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="cDO-xb-ibp"/>
+                            <constraint firstItem="TfZ-d6-bKB" firstAttribute="top" secondItem="8bC-Xf-vdC" secondAttribute="top" id="t3w-A7-OYh"/>
+                            <constraint firstItem="fuF-3R-xNc" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" id="zxQ-lR-7gn"/>
                         </constraints>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                     </view>
@@ -50,7 +47,7 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="136.80000000000001" y="102.70935960591133"/>
+            <point key="canvasLocation" x="133.59999999999999" y="101.97044334975369"/>
         </scene>
     </scenes>
 </document>
