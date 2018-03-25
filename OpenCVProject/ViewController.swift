@@ -27,10 +27,12 @@ class ViewController: UIViewController, FrameExtractorDelegate {
     private let subKeyVision = "06c3d4a53d684a35ba9eeb848610c494"
     let urlFace = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0"
     let urlVision = "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0"
-    let largepersonGroupId = "lpg#"
+    let largepersonGroupId = "lpg_"
     var curLpgNum = 1
-    
+    var people : [String : [String : String]]!  //  {personID : {  "name" : name,
+                                                //                 "relation" : relation }
     @IBOutlet weak var imageView: UIImageView!
+    //people[id] = ["name":name,"relation":relation]
     
     @IBAction func speakPressed(_ sender: Any) {
        /* if audioEngine.isRunning {
@@ -47,7 +49,10 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         } else {
             requestSpeechAuth()
         } */
-        self.analyzeFace(image: imageView.image!)
+        //self.analyzeFace(image: imageView.image!)
+        //self.addFaceToPerson(lpgId: "lpg_1", personId: "1f01ca93-198a-4c4a-8b82-d8ba4190ce78", userData: "", targetFace: "", image: imageView.image!, num: 3)
+        let lpgId = self.largepersonGroupId + "\(self.curLpgNum)"
+        self.createPerson(lpg: lpgId, name: "person_2", userData: "")
     }
     
     
@@ -71,8 +76,10 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         }
         frameExtractor = FrameExtractor()
         frameExtractor.delegate = self
-        
-        //self.createLargePersonGroup(largePersonGroupId: largepersonGroupId+"1", userData: "")
+        let lpgId = self.largepersonGroupId + "\(self.curLpgNum)"
+        print(lpgId)
+        //self.createLargePersonGroup(largePersonGroupId: lpgId, userData: "")
+        //self.createPerson(lpg: lpgId, name: "person_1", userData: "")
         
     }
     
@@ -182,6 +189,7 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                 return
             }
             print("Response: \(String(describing: response))")
+            
         }
         task.resume()
     }
@@ -196,18 +204,45 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         request.httpBody = bodyData
         let session = URLSession.shared
         let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
-            //print("Response: \(String(describing: response))")
+            print("Response: \(String(describing: response))")
             guard let data = data, error == nil else {
                 print(error?.localizedDescription ?? "No data")
                 return
             }
             let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
             print("Body: \(String(describing: strData))")
+            if let responseDict = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: String] {
+                let personId = responseDict!["personId"]
+                print(personId!)
+                self.speak(text: "hold while I remember this person")
+                self.addFaceToPerson(lpgId: lpg, personId: personId!, userData: "", targetFace: "", image: self.imageView.image!, num: 3)
+                self.train(lpg: lpg)
+            }
         })
         task.resume()
     }
     
-    
+    func addFaceToPerson(lpgId: String, personId: String, userData: String, targetFace: String, image:UIImage, num:Int) {
+        print("adding face to person \(personId)")
+        let url = urlFace + "/largepersongroups/\(lpgId)/persons/\(personId)/persistedfaces"
+        var request = self.postRequest(url: url, subKey: subKeyFace, method: "POST", contentType: "application/octet-stream")
+        request.httpBody = UIImageJPEGRepresentation(image, 1)
+        let session = URLSession.shared
+        session.dataTask(with: request)
+        let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
+            print("Response: \(String(describing: response))")
+            guard let data = data, error == nil else {
+                print(error?.localizedDescription ?? "No data")
+                return
+            }
+            let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
+            print("Body: \(String(describing: strData))")
+            if num != 1 {
+                self.addFaceToPerson(lpgId: lpgId, personId: personId, userData: userData, targetFace: targetFace, image: image, num: num-1)
+            }
+        })
+        task.resume()
+    }
     
     func createLargePersonGroup(largePersonGroupId: String, userData: String) {
         print("creating large person group \(largePersonGroupId)")
@@ -220,7 +255,7 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         request.httpBody = bodyData
         let session = URLSession.shared
         let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
-            //print("Response: \(String(describing: response))")
+            print("Response: \(String(describing: response))")
             guard let data = data, error == nil else {
                 print(error?.localizedDescription ?? "No data")
                 return
