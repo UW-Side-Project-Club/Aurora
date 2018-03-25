@@ -377,6 +377,37 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         return text
     }
     
+   /* func OCR(image: UIImage){
+        let request = self.postRequest(url: urlVision+"/ocr?en", subKey: subKeyVision, method: "POST", contentType: "application/octet-stream")
+        let session = URLSession.shared
+        let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
+            //print("Response: \(String(describing: response))")
+            let strData = NSString(data: data!, encoding: String.Encoding.utf8.rawValue)
+            print("Body: \(String(describing: strData))")
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(APIOCR.self, from: data!)
+                if !response.regions.isEmpty {
+                    for region in response.regions {
+                        for line in region.lines {
+                            var lineString = ""
+                            for word in line.words {
+                                lineString += word.text
+                            }
+                            self.speak(text: lineString)
+                        }
+                    }
+                }
+            } catch {
+                print("error parsing data")
+                return
+            }
+            
+        })
+        
+        task.resume()
+    } */
+    
     func speak(text: String) {
         let synth = AVSpeechSynthesizer()
         let speech = AVSpeechUtterance(string: text )
