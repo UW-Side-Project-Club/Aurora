@@ -14,6 +14,11 @@ import AVFoundation
 class ViewController: UIViewController, FrameExtractorDelegate {
    
     var frameExtractor : FrameExtractor!
+    var personCounter = 0
+    var faceCounter = 0
+    var recognizeBool = false
+    var nameBool = false
+    var relationBool = false
     
     let audioEngine = AVAudioEngine()
     let speechRecognizer: SFSpeechRecognizer? = SFSpeechRecognizer()
@@ -29,24 +34,39 @@ class ViewController: UIViewController, FrameExtractorDelegate {
     let urlVision = "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0"
     let largepersonGroupId = "lpg#"
     var curLpgNum = 1
+    var people : [String : [String: String]]!
     
     @IBOutlet weak var imageView: UIImageView!
     
     @IBAction func speakPressed(_ sender: Any) {
-       /* if audioEngine.isRunning {
+       if audioEngine.isRunning {
             audioEngine.stop()
             audioEngine.inputNode.removeTap(onBus: 0)
             self.request.endAudio()
             //activitySpinner.isHidden = true
             print(self.speechResult)
-            if self.speechResult != nil && speechResult.lowercased().contains("describe") {
-                print("describing")
-                self.describe(image: imageView.image!)
+            var name : String
+        var id: String
+            if (recognizeBool) {
+                let sR = speechResult.lowercased()
+                if sR.contains("yes") || sR.contains("yeah") || sR.contains("sure") || sR.contains("okay") {
+                    print("recognizing")
+                    id = self.createPerson("","","")//TO DO
+                }
+            } else if nameBool {
+                name = self.speechResult
+            } else if relationBool {
+                people[id] = ["name" : name, "relation" : self.speechResult]
+            } else if self.speechResult != nil {
+                if speechResult.lowercased().contains("describe") {
+                    print("describing")
+                    self.describe(image: imageView.image!)
+                }
             }
             
         } else {
-            requestSpeechAuth()
-        } */
+            //  requestSpeechAuth()
+        }
         self.analyzeFace(image: imageView.image!)
     }
     
@@ -136,12 +156,24 @@ class ViewController: UIViewController, FrameExtractorDelegate {
             }
             let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
             print("Body: \(String(describing: strData))")
-            /*if let responseJSON = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                let faceIds = responseJSON!["faceIds"] as? [String]
-                for faceId in faceIds! {
-                    print(faceId)
+            if let responseDict = try? JSONSerialization.jsonObject(with: data, options: []) as? [[String: Any]] {
+                for face in responseDict! {
+                    let candidates = face["candidates"] as? [[String: Any]]
+                    if (!((candidates?.isEmpty)!)){
+                        let personID = candidates![0]["personID"] as? String
+                        let name = self.people[personID!]!["name"]
+                        let relation = self.people[personID!]!["relation"]
+                        self.speak(text: "I see your"+relation!+name!)
+                    }
+                    else{
+                        self.speak(text: "Do you want to remember this person?")
+                        self.recognizeBool=true
+                        self.requestSpeechAuth()
+
+                        
+                    }
                 }
-            }*/
+            }
         })
         task.resume()
     }
@@ -250,13 +282,14 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                     let confidence = cap![0]["confidence"] as? Float
                     if ((text?.contains("man"))! || (text?.contains("men"))! || (text?.contains("person"))! || (text?.contains("woman"))! || (text?.contains("women"))! || (text?.contains("people"))!) {
                         self.analyzeFace(image: image)
+                        self.personCounter+=1
                     } else if (confidence! > 0.5) {
                         self.speak(text: "I see " + text!)
                     } else {
-                        self.speak(text: "I am Not sure please try again")
+                        self.speak(text: "I am not sure please try again")
                     }
                 } else {
-                    self.speak(text: "I am Not sure please try again")
+                    self.speak(text: "I am not sure please try again")
                 }
                 print(cap! as Any)
             } catch {
@@ -381,6 +414,12 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                 self.speechResult = results?.bestTranscription.formattedString
             }
         }
+    }
+    func daySummary(){
+        if (!(personCounter==0)){
+            self.speak(text: "You have seen \(personCounter)" + "faces")
+        }
+        
     }
 }
 
