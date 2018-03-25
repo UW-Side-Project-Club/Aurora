@@ -23,10 +23,17 @@ class ViewController: UIViewController, FrameExtractorDelegate {
     var node: AVAudioInputNode!
     var request : SFSpeechAudioBufferRecognitionRequest!
     
+    private let subKeyFace  = "b620b11600bb4dee9f8e3b243d9b6b01"
+    private let subKeyVision = "06c3d4a53d684a35ba9eeb848610c494"
+    let urlFace = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0"
+    let urlVision = "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0"
+    let largepersonGroupId = "lpg#"
+    var curLpgNum = 1
+    
     @IBOutlet weak var imageView: UIImageView!
     
     @IBAction func speakPressed(_ sender: Any) {
-        if audioEngine.isRunning {
+       /* if audioEngine.isRunning {
             audioEngine.stop()
             audioEngine.inputNode.removeTap(onBus: 0)
             self.request.endAudio()
@@ -39,7 +46,8 @@ class ViewController: UIViewController, FrameExtractorDelegate {
             
         } else {
             requestSpeechAuth()
-        }
+        } */
+        self.analyzeFace(image: imageView.image!)
     }
     
     
@@ -63,6 +71,8 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         }
         frameExtractor = FrameExtractor()
         frameExtractor.delegate = self
+        
+        //self.createLargePersonGroup(largePersonGroupId: largepersonGroupId+"1", userData: "")
         
     }
     
@@ -100,18 +110,131 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         }
     }
     
-    func postRequest(url: String, subKey: String, image: UIImage) -> URLRequest {
+    func postRequest(url: String, subKey: String, method: String, contentType: String) -> URLRequest {
         var request = URLRequest(url: URL(string: url)!)
-        request.httpMethod = "POST"
-        request.httpBody = UIImageJPEGRepresentation(image, 1)
-        request.addValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
+        request.httpMethod = method
+        request.addValue(contentType, forHTTPHeaderField: "Content-Type")
         request.addValue(subKey, forHTTPHeaderField: "Ocp-Apim-Subscription-Key")
         
         return request
     }
     
+    func Identify(faceIds: [String] , largePersonGroupId: String , maxNumOfCandiadatesReturned: Int , confidenceThreshold: Float) {
+        print("identifying")
+        var request = self.postRequest(url: urlFace+"/identify", subKey: subKeyFace, method: "POST", contentType: "application/json")
+        let session = URLSession.shared
+        let body : [String: Any] = ["faceids":faceIds,
+                                    "largePersonGroupId": largePersonGroupId,
+                                    "maxNumOfCandidatesReturned": maxNumOfCandiadatesReturned,
+                                    "confidenceThreshold": confidenceThreshold]
+        let bodyData = try? JSONSerialization.data(withJSONObject: body, options: [])
+        request.httpBody = bodyData
+        let task = session.dataTask(with: request, completionHandler : { (data, response, error) in
+            guard let data = data, error == nil else {
+                print(error?.localizedDescription ?? "No data")
+                return
+            }
+            let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
+            print("Body: \(String(describing: strData))")
+            /*if let responseJSON = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                let faceIds = responseJSON!["faceIds"] as? [String]
+                for faceId in faceIds! {
+                    print(faceId)
+                }
+            }*/
+        })
+        task.resume()
+    }
+    
+    func addFace(faceListId: String, userData: String, targetFace: String, image: UIImage) {
+        print("adding face")
+        var url = urlFace+"/facelists/" + faceListId + "/persistedFaces"
+        if !(userData.isEmpty) {
+            url += "?userData="+userData
+            if !(targetFace.isEmpty) {
+                url += "&targetFace=" + targetFace
+            }
+        } else if !(targetFace.isEmpty) {
+            url += "?targetFace=" + targetFace
+        }
+        print(url)
+        var request = self.postRequest(url: url, subKey: subKeyFace, method: "POST", contentType: "application/octet-stream")
+        request.httpBody = UIImageJPEGRepresentation(image, 1)
+        let session = URLSession.shared
+        session.dataTask(with: request)
+        let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
+            let strData = NSString(data: data!, encoding: String.Encoding.utf8.rawValue)
+            print("Body: \(String(describing: strData))")
+        })
+        task.resume()
+    }
+    
+    func train(lpg: String) {
+        print("training\(lpg)")
+        let url = urlFace+"/largepersongroups/\(lpg)/train"
+        var request = URLRequest(url: URL(string: url)!)
+        request.httpMethod = "POST"
+        request.addValue(subKeyFace, forHTTPHeaderField: "Ocp-Apim-Subscription-Key")
+        let session = URLSession.shared
+        let task = session.dataTask(with: request) { (data, response, error) in
+            guard let data = data, error == nil else {
+                print(error?.localizedDescription ?? "No data")
+                return
+            }
+            print("Response: \(String(describing: response))")
+        }
+        task.resume()
+    }
+    
+    func createPerson(lpg: String, name: String, userData: String) {
+        print("creating person \(name) in \(lpg)")
+        let url = urlFace+"/largepersongroups/\(lpg)/persons"
+        let body : [String: String] = ["name": name,
+                                       "userData" : userData]
+        let bodyData = try? JSONSerialization.data(withJSONObject: body, options: [])
+        var request = self.postRequest(url: url, subKey: subKeyFace, method: "POST",contentType:  "application/json")
+        request.httpBody = bodyData
+        let session = URLSession.shared
+        let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
+            //print("Response: \(String(describing: response))")
+            guard let data = data, error == nil else {
+                print(error?.localizedDescription ?? "No data")
+                return
+            }
+            let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
+            print("Body: \(String(describing: strData))")
+        })
+        task.resume()
+    }
+    
+    
+    
+    func createLargePersonGroup(largePersonGroupId: String, userData: String) {
+        print("creating large person group \(largePersonGroupId)")
+        let url = urlFace+"/largepersongroups/\(largePersonGroupId)"
+        print(url)
+        let body : [String: String] = ["name": largePersonGroupId,
+                                       "userData" : userData]
+        let bodyData = try? JSONSerialization.data(withJSONObject: body, options: [])
+        var request = self.postRequest(url: url, subKey: subKeyFace, method: "PUT",contentType:  "application/json")
+        request.httpBody = bodyData
+        let session = URLSession.shared
+        let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
+            //print("Response: \(String(describing: response))")
+            guard let data = data, error == nil else {
+                print(error?.localizedDescription ?? "No data")
+                return
+            }
+            let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
+            print("Body: \(String(describing: strData))")
+        })
+        task.resume()
+        
+    }
+    
     func describe(image: UIImage) {
-        let request = self.postRequest(url: "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0/describe", subKey: "5b12f0c970b0483896897cbfaa8672b1", image: image)
+        var request = self.postRequest(url: "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0/describe", subKey: "5b12f0c970b0483896897cbfaa8672b1", method: "POST", contentType: "application/octet-stream")
+        request.httpBody = UIImageJPEGRepresentation(image, 1)
         let session = URLSession.shared
         let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
             //print("Response: \(String(describing: response))")
@@ -139,24 +262,16 @@ class ViewController: UIViewController, FrameExtractorDelegate {
             } catch {
                 print(error.localizedDescription)
             }
-
-          /*  // parse the result as JSON
-            do {
-                let decoder = JSONDecoder()
-                let response = try decoder.decode(APIResponse.self, from: data!)
-                self.speak(text: "I see "+response.description.captions[0].text)
-            } catch {
-                print("error parsing data")
-                return
-            } */
         })
         task.resume()
     }
  
     
     func analyzeFace(image: UIImage) {
+        print("analysing face")
         let faceAttr = "age,gender,smile,facialHair,glasses,emotion,hair"
-        let request = self.postRequest(url: "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/detect?returnFaceId=true&returnFaceLandmarks=false&returnFaceAttributes="+faceAttr, subKey: "34bae6d8076e4fcab9c31846bf62131f",image: image)
+        var request = self.postRequest(url: "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/detect?returnFaceId=true&returnFaceLandmarks=false&returnFaceAttributes="+faceAttr, subKey: "34bae6d8076e4fcab9c31846bf62131f", method: "POST", contentType: "application/octet-stream")
+        request.httpBody = UIImageJPEGRepresentation(image, 1)
         let session = URLSession.shared
         let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
             //print("Response: \(String(describing: response))")
@@ -169,31 +284,26 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                     let faceAttributes = json![0]["faceAttributes"] as? [String: Any]
                     var text = "I see " + self.faceText(faceAttributes: faceAttributes!)
                     self.speak(text: text)
+                    let faceRectangle  = json![0]["faceRectangle"] as? [String: Int]
+                    let targetFace = String(describing: faceRectangle!["left"]!) + "," + String(describing: faceRectangle!["top"]!) + "," + String(describing: faceRectangle!["width"]!) + "," + String(describing: faceRectangle!["height"]!)
+                    print(targetFace)
+                    //self.addFace(faceListId: "face_list1", userData: "", targetFace: targetFace, image: image)
+                    var faceId = json![0]["faceId"] as? String
+                    var faceIds = [faceId!]
                     json?.remove(at: 0)
                     for face in json! {
+                        faceId = face["faceId"] as? String
+                        faceIds.append(faceId!)
                         text = " and " + self.faceText(faceAttributes: (face["faceAttributes"] as? [String: Any])!)
                         self.speak(text: text)
                     }
+                    self.Identify(faceIds: faceIds, largePersonGroupId: self.largepersonGroupId, maxNumOfCandiadatesReturned: 1, confidenceThreshold: 0.5)
                 }
                 
             } catch {
                 print(error.localizedDescription)
                 return
             }
-            
-           /* do {
-                let decoder = JSONDecoder()
-                let response = try decoder.decode(APIFace.self, from: data!)
-                if !response.faces.isEmpty {
-                    for face in response.faces {
-                        let pn = face.gender == "Male" ? "he" : "she"
-                        self.speak(text: "I think "+pn+"is"+String(face.age)+"year old")
-                    }
-                }
-            } catch {
-                print("error parsing data")
-                return
-            } */
         })
         task.resume()
     }
@@ -272,54 +382,7 @@ class ViewController: UIViewController, FrameExtractorDelegate {
             }
         }
     }
-    
-
-    
 }
 
-struct APIResponse : Codable {
-    struct MetaData : Codable {
-        let height: Int
-        let width: Int
-        let format: String
-    }
-    struct Description : Codable {
-        struct Captions : Codable {
-            let text: String
-            let confidence: Float
-        }
-        let tags: [String]
-        let captions: [Captions]
-    }
-    
-    let description: Description
-    let requestId: String
-    let metadata: MetaData
-}
 
-struct APIFace : Codable {
-    struct MetaData : Codable {
-        let height: Int
-        let width: Int
-        let format: String
-    }
-    struct Faces : Codable {
-        let age: Int
-        let gender: String
-        struct FaceRectangle : Codable {
-            let left: Int
-            let top: Int
-            let width: Int
-            let height: Int
-        }
-        let faceRectangle : FaceRectangle
-    }
-    let faces : [Faces]
-    let requestId: String
-    let metadata: MetaData
-}
-
-struct OCRResult: Codable {
-    
-}
 
