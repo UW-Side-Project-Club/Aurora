@@ -139,7 +139,7 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         return request
     }
     
-    func Identify(faceIds: [String] , largePersonGroupId: String , maxNumOfCandiadatesReturned: Int , confidenceThreshold: Float) {
+    func Identify(faceIds: [String] , largePersonGroupId: String , maxNumOfCandiadatesReturned: Int , confidenceThreshold: Float, ) {
         print("identifying")
         var request = self.postRequest(url: urlFace+"/identify", subKey: subKeyFace, method: "POST", contentType: "application/json")
         let session = URLSession.shared
