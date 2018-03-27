@@ -460,10 +460,10 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                     } else if (confidence! > 0.5) {
                         self.speaker.speak(text: "I see " + text!, requiresResponse: false)
                     } else {
-                        self.speak(text: "I am not sure please try again")
+                        self.speaker.speak(text: "I am not sure please try again")
                     }
                 } else {
-                    self.speak(text: "I am not sure please try again")
+                    self.speaker.speak(text: "I am not sure please try again")
                 }
                 print(cap! as Any)
             } catch {
