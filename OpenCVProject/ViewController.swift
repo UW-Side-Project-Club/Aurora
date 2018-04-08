@@ -7,22 +7,15 @@
 //
 
 import UIKit
-import Speech
 import Vision
 import AVFoundation
+import Speech
 
 class ViewController: UIViewController, FrameExtractorDelegate {
    
     var frameExtractor : FrameExtractor!
     
-    // Api information
-    private let subKeyFace  = "b620b11600bb4dee9f8e3b243d9b6b01"
-    private let subKeyVision = "06c3d4a53d684a35ba9eeb848610c494"
-    let urlFace = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0"
-    let urlVision = "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0"
-    let largepersonGroupId = "lpg_"
-    var curLpgNum = 1
-    var isLpgEmpty = true
+    
    
     var people : [String : [String : String]] = [:]     //  {personID : {  "name" : name,
                                                         //                 "relation" : relation }
@@ -30,75 +23,26 @@ class ViewController: UIViewController, FrameExtractorDelegate {
     var recognizeBool = false   // remembering a person
     var nameBool = false        // asking for the name
     var relationBool = false    // asking for the relation
+    var introUserNameBool = false;  // asking for the user's name
+    
+    
+    var userName = ""
     
     var personIds : [String] = []
     var numPeople = 0
     
+    var name = ""
+    
+    var speechToText : [String] = []
+    
     // class object handling speech recognition and text to speech
-    let speaker = Speaker()
+    var speaker = Speaker()
     
+    let cs = CognitiveServices()
+    
+    
+    @IBOutlet weak var caption: UILabel!
     @IBOutlet weak var imageView: UIImageView!
-    
-    @IBAction func speakPressed(_ sender: Any) {
-        let lpgId = self.largepersonGroupId + "\(self.curLpgNum)"
-        if speaker.speechRecognizer.audioEngine.isRunning {
-            speaker.speechRecognizer.audioEngine.stop()
-            speaker.speechRecognizer.audioEngine.inputNode.removeTap(onBus: 0)
-            speaker.speechRecognizer.request.endAudio()
-            //activitySpinner.isHidden = true
-            print("1"+speaker.speechRecognizer.speechResult)
-            if recognizeBool {
-                let sR = speaker.speechRecognizer.speechResult.lowercased()
-                if sR.contains("yes") || sR.contains("yeah") || sR.contains("sure") || sR.contains("okay") {
-                    print("recognizing")
-                    recognizeBool = false
-                    nameBool = true
-                    self.speaker.speak(text: "what is this person's name?",requiresResponse: true)
-                }
-                recognizeBool = false
-            } else if nameBool {
-                let name = speaker.speechRecognizer.speechResult
-                nameBool = false
-                relationBool = true
-                self.createPerson(lpg: lpgId ,name: name!, userData: "")
-            } else if relationBool {
-                people[self.personIds.last!]?.updateValue(speaker.speechRecognizer.speechResult, forKey: "relation")
-                relationBool = false
-                let name = people[self.personIds.last!]!["name"]!
-                speaker.speak(text: "I will now remember \(name)", requiresResponse: false)
-            } else if speaker.speechRecognizer.speechResult != nil {
-                if speaker.speechRecognizer.speechResult.lowercased().contains("describe") {
-                    print("describing")
-                    speaker.speak(text: "processing")
-                    self.describe(image: imageView.image!)
-                } else if speaker.speechRecognizer.speechResult.lowercased().contains("read") {
-                    print("reading")
-                    speaker.speak(text: "processing")
-                    self.OCR(image: imageView.image!)
-                } else if speaker.speechRecognizer.speechResult.lowercased().contains("delete") {
-                    print("deleting all persons")
-                    speaker.speak(text: "processing")
-                    for personId in personIds{
-                        self.deletePerson(lpgId: lpgId, personId: personId)
-                    }
-                    personIds = []
-                    numPeople = 0
-                } else if speaker.speechRecognizer.speechResult.lowercased().contains("train") {
-                    print("training")
-                    speaker.speak(text: "processing")
-                    self.train(lpg: lpgId)
-                }
-            }
-            
-        } else {
-            speaker.speechRecognizer.requestSpeechAuth()
-        }
-        //self.analyzeFace(image: imageView.image!)
-        //self.addFaceToPerson(lpgId: "lpg_1", personId: "1f01ca93-198a-4c4a-8b82-d8ba4190ce78", userData: "", targetFace: "", image: imageView.image!, num: 3)
-        
-        //self.createPerson(lpg: lpgId, name: "person_5", userData: "")
-    }
-    
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -108,11 +52,8 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         tap2.numberOfTapsRequired = 2
         view.addGestureRecognizer(tap2)
         
-        let tap3 = UITapGestureRecognizer(target: self, action: #selector(tripleTapped))
-        tap3.numberOfTapsRequired = 3
-        view.addGestureRecognizer(tap3)
-        
         let audioSession = AVAudioSession.sharedInstance()
+        //print(audioSession.inputDataSources)
         
         do {
             try audioSession.setCategory(AVAudioSessionCategoryPlayAndRecord, with:.defaultToSpeaker)
@@ -122,30 +63,139 @@ class ViewController: UIViewController, FrameExtractorDelegate {
             print("audioSession error: \(error.localizedDescription)")
         }
         
-        do {
-            try audioSession.overrideOutputAudioPort(AVAudioSessionPortOverride.speaker)
-            print("set output to speaker")
-        } catch let error as NSError {
-            print("audioSession error: \(error.localizedDescription)")
-        }
+        let lpgId = cs.largepersonGroupId + "\(cs.curLpgNum)"
+        self.getPeopleListFromGroup(lpgId: lpgId, start: "")
+        
+        self.printPersons()
+        
+        self.caption.lineBreakMode = NSLineBreakMode.byTruncatingHead
+        self.caption.numberOfLines = 1
+        self.speaker = Speaker(caption: self.caption)
         
         frameExtractor = FrameExtractor()
         frameExtractor.delegate = self
-       // let lpgId = self.largepersonGroupId + "\(self.curLpgNum)"
-        //print(lpgId)
-        //self.createLargePersonGroup(largePersonGroupId: lpgId, userData: "")
-        //self.createPerson(lpg: lpgId, name: "person_1", userData: "")
-        //print(self.personIds.joined(separator: " "))
-        //"eb08a607-8b28-4672-9393-b385178c3a96"
+        
+        if self.isAppAlreadyLaunchedOnce() {
+            // intro
+            self.intro(askedName: false)
+        }
     }
+    
+    func isAppAlreadyLaunchedOnce()->Bool{
+        let defaults = UserDefaults.standard
+        if defaults.string(forKey: "isAppAlreadyLaunchedOnce") != nil{
+            print("App already launched")
+            return true
+        }else{
+            defaults.set(true, forKey: "isAppAlreadyLaunchedOnce")
+            print("App launched first time")
+            return false
+        }
+    }
+    
+    func intro(askedName: Bool) {
+       var introText = "Hi, I am Aurora. I am your personal guide to a brighter world. I will process your needs through voice command. Any time you needed to talk to me tap the screen, start talking and once done tap again. Before I move on, may I ask your name?"
+        if !askedName {
+            self.speaker.speak(text: introText, requiresResponse: true)
+            self.introUserNameBool = true
+        } else {
+            introText = "Pleasure to be your guide \(self.userName). here are some things you can ask me. you can ask me to describe the surrounding and I will do so with the best of my ability, although I am not always right. you can ask me to read text for you. and finally I can transcribe what I hear and have it read back to you whenever you ask me to. I will continue to get better at assisting you and will learn to do more to be of a greater help "
+            self.speaker.speak(text: introText)
+        }
+    }
+    
+    func printPersons() {
+        for (_, person) in self.people {
+            print(person["name"]! + ": " + person["relation"]!)
+        }
+    }
+    
+    @IBAction func speakPressed(_ sender: Any) {
+        let lpgId = cs.largepersonGroupId + "\(cs.curLpgNum)"
+        if speaker.speechRecognizer.audioEngine.isRunning {
+            speaker.speechRecognizer.stopDetection()
+            //activitySpinner.isHidden = true
+            //print("1"+speaker.speechRecognizer.speechResult)
+            if introUserNameBool {
+                if let sR = speaker.speechRecognizer.speechResult {
+                    print(sR)
+                    self.userName = sR
+                    introUserNameBool = false
+                    self.intro(askedName: true)
+                } else {
+                    self.speaker.speak(text: "Sorry I did not catch that, could you repeat please?", requiresResponse: true)
+                }
+            }
+            else if recognizeBool {
+                if let sR = speaker.speechRecognizer.speechResult {
+                    print(sR)
+                    if sR.lowercased().contains("yes") || sR.lowercased().contains("yeah") || sR.lowercased().contains("sure") || sR.lowercased().contains("okay") {
+                        print("recognizing")
+                        recognizeBool = false
+                        nameBool = true
+                        self.speaker.speak(text: "what is this person's name?",requiresResponse: true)
+                    }
+                    recognizeBool = false
+                } else {
+                    self.speaker.speak(text: "Sorry I did not catch that, could you repeat please?", requiresResponse: true)
+                }
+            } else if nameBool {
+                
+                if let name = speaker.speechRecognizer.speechResult {
+                    nameBool = false
+                    relationBool = true
+                    self.name = name
+                    self.speaker.speak(text: "what is \(self.name)'s relation to you?", requiresResponse: true)
+                } else {
+                    self.speaker.speak(text: "Sorry I did not catch that, could you repeat please?", requiresResponse: true)
+                }
+                
+                //self.speaker.speak(text: "what is \(self.name)'s relation to you?", requiresResponse: true)
+                //self.createPerson(lpg: lpgId ,name: name, userData: "")
+            } else if relationBool {
+                relationBool = false
+                self.createPerson(lpg: lpgId ,name: self.name, userData: speaker.speechRecognizer.speechResult!)
+                //people[self.personIds.last!]?.updateValue(speaker.speechRecognizer.speechResult, forKey: "relation")
+               // let name = people[self.personIds.last!]!["name"]!
+                
+            } else if let sR = speaker.speechRecognizer.speechResult  {
+                if sR.lowercased().contains("describe") {
+                    print("describing")
+                    speaker.speak(text: "processing")
+                    self.describe(image: imageView.image!)
+                } else if sR.lowercased().contains("read") {
+                    print("reading")
+                    speaker.speak(text: "processing")
+                    self.OCR(image: imageView.image!)
+                } else if sR.lowercased().contains("delete") {
+                    print("deleting all persons")
+                    speaker.speak(text: "processing")
+                    for personId in personIds{
+                        self.deletePerson(lpgId: lpgId, personId: personId)
+                    }
+                    personIds = []
+                    numPeople = 0
+                } else if sR.lowercased().contains("train") {
+                    print("training")
+                    speaker.speak(text: "processing")
+                    self.train(lpg: lpgId)
+                } else {
+                    speechToText.append(speaker.speechRecognizer.speechResult)
+                    print(speechToText  )
+                    //self.speaker.speak(text: "Sorry I did not catch that, could you repeat please?")
+                }
+            } else {
+                self.speaker.speak(text: "Sorry I did not catch that, could you repeat please?")
+            }
+        } else {
+            speaker.speechRecognizer.requestSpeechAuth(caption: self.caption)
+        }
+    }
+    
     
     @objc func doubleTapped() {
         // do something here
         frameExtractor.flipCamera()
-    }
-    
-    @objc func tripleTapped() {
-        describe(image: imageView.image!)
     }
 
     override func didReceiveMemoryWarning() {
@@ -173,19 +223,9 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         }
     }
     
-    func postRequest(url: String, subKey: String, method: String, contentType: String) -> URLRequest {
-        var request = URLRequest(url: URL(string: url)!)
-        request.httpMethod = method
-        if !contentType.isEmpty {
-            request.addValue(contentType, forHTTPHeaderField: "Content-Type")
-        }
-        request.addValue(subKey, forHTTPHeaderField: "Ocp-Apim-Subscription-Key")
-        
-        return request
-    }
-    
+    // gets the list of persons stored in the group with id lpgId (start to max top)
     func getPeopleListFromGroup(lpgId: String, start: String, top: Int = 1000) {
-        var url = urlFace + "/largepersongroups/\(lpgId)/persons"
+        var url = cs.urlFace + "/largepersongroups/\(lpgId)/persons"
         if !start.isEmpty {
             url += "?start=\(start)"
             if top != -1 {
@@ -194,7 +234,7 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         } else if top != -1 {
             url += "?top=\(top)"
         }
-        let request = self.postRequest(url: url, subKey: subKeyFace, method: "GET", contentType: "")
+        let request = self.cs.postRequest(url: url, subKey: cs.subKeyFace, method: "GET", contentType: "")
         let session = URLSession.shared
         let task = session.dataTask(with: request) { (data, response, error) in
             guard let data = data, let response = response as? HTTPURLResponse, error == nil && response.statusCode == 200 else {
@@ -203,30 +243,38 @@ class ViewController: UIViewController, FrameExtractorDelegate {
             }
             print("successfully got persons list from\(lpgId)")
             let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
-            print("Body: \(String(describing: strData))")
+            print("Body: \(String(describing: strData!))")
             if let responseDict = try? JSONSerialization.jsonObject(with: data, options: []) as? [[String: Any]] {
                 if (responseDict?.isEmpty)!{
                     print("no persons in \(lpgId)")
-                    self.isLpgEmpty = true
+                    self.cs.isLpgEmpty = true
                     return
                 }
-                self.isLpgEmpty = false
+                self.cs.isLpgEmpty = false
                 for person in responseDict! {
                     self.personIds = []
                     self.numPeople = 0
                     let personId = person["personId"] as? String
                     self.personIds.append(personId!)
                     self.numPeople += 1
+                    let personName = person["name"] as? String
+                    if let relation = person["userData"] as? String {
+                        print(relation)
+                        self.people.updateValue(["name" : personName!, "relation": relation], forKey: personId!)
+                    } else {
+                        self.people.updateValue(["name" : personName!, "relation": ""], forKey: personId!)
                     //self.deletePerson(lpgId: lpgId, personId: personId!)
+                    }
                 }
             }
         }
         task.resume()
     }
     
+    // deletes the person with personId from the large person group with id lpgId
     func deletePerson(lpgId: String, personId: String) {
-        let url = urlFace + "/largepersongroups/\(lpgId)/persons/\(personId)"
-        let request = self.postRequest(url: url, subKey: subKeyFace, method: "DELETE", contentType: "")
+        let url = cs.urlFace + "/largepersongroups/\(lpgId)/persons/\(personId)"
+        let request = self.cs.postRequest(url: url, subKey: cs.subKeyFace, method: "DELETE", contentType: "")
         let session = URLSession.shared
         let task = session.dataTask(with: request) { (data, response, error) in
             guard let response = response as? HTTPURLResponse, error == nil && response.statusCode == 200 else {
@@ -238,182 +286,20 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         task.resume()
     }
     
-    func Identify(faceIds: [String] , largePersonGroupId: String , maxNumOfCandiadatesReturned: Int , confidenceThreshold: Float, text: String) {
-        print("identifying")
-        var request = self.postRequest(url: urlFace+"/identify", subKey: subKeyFace, method: "POST", contentType: "application/json")
-        let session = URLSession.shared
-        print(faceIds)
-        let body : [String: Any] = ["faceids":faceIds,
-                                    "largePersonGroupId": largePersonGroupId,
-                                    "maxNumOfCandidatesReturned": maxNumOfCandiadatesReturned,
-                                    "confidenceThreshold": confidenceThreshold]
-        let bodyData = try? JSONSerialization.data(withJSONObject: body, options: [])
-        request.httpBody = bodyData
-        let task = session.dataTask(with: request, completionHandler : { (data, response, error) in
-            print("Response: \(String(describing: response))")
-            let strData = NSString(data: data!, encoding: String.Encoding.utf8.rawValue)
-            print("Body: \(String(describing: strData))")
-            guard let data = data, let response = response as? HTTPURLResponse, error == nil && response.statusCode == 200 else {
-                print(error?.localizedDescription ?? "No data")
-                return
-            }
-            print(response.statusCode)
-           // let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
-           // print("Body: \(String(describing: strData))")
-            if let responseDict = try? JSONSerialization.jsonObject(with: data, options: []) as? [[String: Any]] {
-                for face in responseDict! {
-                    let candidates = face["candidates"] as? [[String: Any]]
-                    if (!((candidates?.isEmpty)!) && self.numPeople != 0){
-                        let personID = candidates![0]["personId"] as? String
-                        print(personID!)
-                        print(self.personIds.joined(separator: " "))
-                        if let key = self.people[personID!] {
-                            let name = key["name"]
-                            let relation = key["relation"]
-                            self.speaker.speak(text: "I see your " + relation! + " , " + name!, requiresResponse: false)
-                        } else {
-                            print("personId: \(personID!) does not exist!")
-                        }
-                    }
-                    else{
-                        self.speaker.speak(text: text, requiresResponse: false)
-                        self.speaker.speak(text: "Do you want to remember this person?", requiresResponse: true)
-                        self.recognizeBool=true
-                        //self.speechRecognizer.requestSpeechAuth()
-                    }
-                }
-            }
-        })
-        task.resume()
+    func updatePerson() {
+        
     }
     
-    func addFace(faceListId: String, userData: String, targetFace: String, image: UIImage) {
-        print("adding face")
-        var url = urlFace+"/facelists/" + faceListId + "/persistedFaces"
-        if !(userData.isEmpty) {
-            url += "?userData="+userData
-            if !(targetFace.isEmpty) {
-                url += "&targetFace=" + targetFace
-            }
-        } else if !(targetFace.isEmpty) {
-            url += "?targetFace=" + targetFace
-        }
-        print(url)
-        var request = self.postRequest(url: url, subKey: subKeyFace, method: "POST", contentType: "application/octet-stream")
-        request.httpBody = UIImageJPEGRepresentation(image, 1)
-        let session = URLSession.shared
-        session.dataTask(with: request)
-        let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
-            //print("Response: \(String(describing: response))")
-            guard let data = data, let response = response as? HTTPURLResponse, error == nil && response.statusCode == 200 else {
-                print(error?.localizedDescription ?? "No data")
-                return
-            }
-            print(response.statusCode)
-            let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
-            print("Body: \(String(describing: strData))")
-        })
-        task.resume()
-    }
     
-    func train(lpg: String) {
-        print("training \(lpg)")
-        let url = urlFace+"/largepersongroups/\(lpg)/train"
-        var request = URLRequest(url: URL(string: url)!)
-        request.httpMethod = "POST"
-        request.addValue(subKeyFace, forHTTPHeaderField: "Ocp-Apim-Subscription-Key")
-        let session = URLSession.shared
-        let task = session.dataTask(with: request) { (data, response, error) in
-            //print("Response: \(String(describing: response))")
-            guard error == nil else {
-                print(error?.localizedDescription ?? "No data")
-                return
-            }
-            if let response = response as? HTTPURLResponse, response.statusCode == 202 {
-                print("train successful")
-                //self.speaker.speak(text: "what is this person's name?",requiresResponse: true)
-                //self.nameBool = true
-                //self.requestSpeechAuth()
-                self.speaker.speak(text: "what is \(String(describing: self.people[self.personIds.last!]!["name"]!))'s relation to you?", requiresResponse: true)
-            }
-            
-        }
-        task.resume()
-    }
-    
-    func createPerson(lpg: String, name: String, userData: String) {
-        print("creating person \(name) in \(lpg)")
-        self.isLpgEmpty = false
-        var personId = ""
-        let url = urlFace+"/largepersongroups/\(lpg)/persons"
-        let body : [String: String] = ["name": name,
-                                       "userData" : userData]
-        let bodyData = try? JSONSerialization.data(withJSONObject: body, options: [])
-        var request = self.postRequest(url: url, subKey: subKeyFace, method: "POST",contentType: "application/json")
-        request.httpBody = bodyData
-        let session = URLSession.shared
-        let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
-            //print("Response: \(String(describing: response))")
-            guard let data = data, let response = response as? HTTPURLResponse, error == nil && response.statusCode == 200 else {
-                print(error?.localizedDescription ?? "No data")
-                return
-            }
-            print(response.statusCode)
-            let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
-            print("Body: \(String(describing: strData))")
-            if let responseDict = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: String] {
-                personId = responseDict!["personId"]!
-                print(personId)
-                self.personIds.append(personId)
-                print(self.personIds.last)
-                self.numPeople += 1
-                self.people.updateValue(["name" : name], forKey: personId)
-                self.speaker.speak(text: "hold while I remember \(name)", requiresResponse: false)
-                DispatchQueue.main.async {
-                    self.addFaceToPerson(lpgId: lpg, personId: personId, userData: userData, targetFace: "", image: self.imageView.image! ,num: 3)
-                }
-                
-            }
-        })
-        task.resume()
-        print(personId)
-    }
-    
-    func addFaceToPerson(lpgId: String, personId: String, userData: String, targetFace: String, image: UIImage, num:Int) {
-        print("adding face to person \(personId)")
-        let url = urlFace + "/largepersongroups/\(lpgId)/persons/\(personId)/persistedfaces"
-        var request = self.postRequest(url: url, subKey: subKeyFace, method: "POST", contentType: "application/octet-stream")
-        request.httpBody = UIImageJPEGRepresentation(image, 1)
-        let session = URLSession.shared
-        session.dataTask(with: request)
-        let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
-            //print("Response: \(String(describing: response))")
-            guard let data = data, let response = response as? HTTPURLResponse, error == nil && response.statusCode == 200 else {
-                print(error?.localizedDescription ?? "No data")
-                return
-            }
-            print(response.statusCode)
-            let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
-            print("Body: \(String(describing: strData))")
-            if num != 1 {
-                DispatchQueue.main.async {
-                    self.addFaceToPerson(lpgId: lpgId, personId: personId, userData: userData, targetFace: targetFace, image: self.imageView.image! ,num: num-1)
-                }
-            } else {
-                self.train(lpg: lpgId)
-            }
-        })
-        task.resume()
-    }
-    
+    // creates a large person group with the given id and data
     func createLargePersonGroup(largePersonGroupId: String, userData: String) {
         print("creating large person group \(largePersonGroupId)")
-        let url = urlFace+"/largepersongroups/\(largePersonGroupId)"
+        let url = self.cs.urlFace+"/largepersongroups/\(largePersonGroupId)"
         print(url)
         let body : [String: String] = ["name": largePersonGroupId,
                                        "userData" : userData]
         let bodyData = try? JSONSerialization.data(withJSONObject: body, options: [])
-        var request = self.postRequest(url: url, subKey: subKeyFace, method: "PUT",contentType:  "application/json")
+        var request = self.cs.postRequest(url: url, subKey: self.cs.subKeyFace, method: "PUT",contentType:  "application/json")
         request.httpBody = bodyData
         let session = URLSession.shared
         let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
@@ -430,8 +316,9 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         
     }
     
+    // sends a request to Vision API to get a description of the captured image
     func describe(image: UIImage) {
-        var request = self.postRequest(url: "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0/describe", subKey: "5b12f0c970b0483896897cbfaa8672b1", method: "POST", contentType: "application/octet-stream")
+        var request = self.cs.postRequest(url: self.cs.urlVision+"/describe", subKey: self.cs.subKeyVision, method: "POST", contentType: "application/octet-stream")
         request.httpBody = UIImageJPEGRepresentation(image, 1)
         let session = URLSession.shared
         let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
@@ -442,21 +329,27 @@ class ViewController: UIViewController, FrameExtractorDelegate {
             do {
                 let json =  try JSONSerialization.jsonObject(with: data!, options: []) as? [String: Any]
                 let des =  json!["description"] as? [String: Any]
-                let cap =  des!["captions"] as? [[String: Any]]
-                if (!(cap?.isEmpty)!) {
-                    let text = cap![0]["text"] as? String
-                    let confidence = cap![0]["confidence"] as? Float
-                    if ((text?.contains("man"))! || (text?.contains("men"))! || (text?.contains("person"))! || (text?.contains("woman"))! || (text?.contains("women"))! || (text?.contains("people"))!) {
+                
+                if let cap =  des!["captions"] as? [[String: Any]], (!(cap.isEmpty)) {
+                    guard let text = cap[0]["text"] as? String else {
+                        // text is nil
+                        print("text is nil")
+                        self.speaker.speak(text: "I am Not sure please try again")
+                        return
+                    }
+                    if ((text.contains("man")) ||  (text.contains("person")) || (text.contains("woman"))) {
+                        print("there is face/s in the image")
                         self.analyzeFace(image: image)
-                    } else if (confidence! > 0.5) {
-                        self.speaker.speak(text: "I see " + text!, requiresResponse: false)
+                    } else if let confidence = cap[0]["confidence"] as? Double, confidence > 0.5 {
+                        self.speaker.speak(text: "I see " + text, requiresResponse: false)
                     } else {
+                        print("there are no faces or conf < 0.5 or conf == nil")
                         self.speaker.speak(text: "I am Not sure please try again", requiresResponse: false)
                     }
                 } else {
+                    print("cap is empty or nil")
                     self.speaker.speak(text: "I am Not sure please try again", requiresResponse: false)
                 }
-                print(cap! as Any)
             } catch {
                 print(error.localizedDescription)
             }
@@ -464,11 +357,11 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         task.resume()
     }
  
-    
+    // sends a request to face API to detect faces in the captured image
     func analyzeFace(image: UIImage) {
         print("analysing face")
         let faceAttr = "age,gender,smile,facialHair,glasses,emotion,hair"
-        var request = self.postRequest(url: urlFace+"/detect?returnFaceId=true&returnFaceLandmarks=false&returnFaceAttributes="+faceAttr, subKey: subKeyFace, method: "POST", contentType: "application/octet-stream")
+        var request = self.cs.postRequest(url: self.cs.urlFace+"/detect?returnFaceId=true&returnFaceLandmarks=false&returnFaceAttributes="+faceAttr, subKey: self.cs.subKeyFace, method: "POST", contentType: "application/octet-stream")
         request.httpBody = UIImageJPEGRepresentation(image, 1)
         let session = URLSession.shared
         let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
@@ -487,15 +380,17 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                     print(targetFace)
                     //self.addFace(faceListId: "face_list1", userData: "", targetFace: targetFace, image: image)
                     var faceId = json![0]["faceId"] as? String
-                    var faceIds = [faceId!]
-                    json?.remove(at: 0)
+                    var faceIds : [String] = []
+                    //json?.remove(at: 0)
+                    var textList : [String] = []
                     for face in json! {
                         faceId = face["faceId"] as? String
                         faceIds.append(faceId!)
-                        text = " and " + self.faceText(faceAttributes: (face["faceAttributes"] as? [String: Any])!)
+                        text += " and " + self.faceText(faceAttributes: (face["faceAttributes"] as? [String: Any])!)
                         //self.speak(text: text)
+                        textList.append("I see " + self.faceText(faceAttributes: (face["faceAttributes"] as? [String: Any])!))
                     }
-                    self.Identify(faceIds: faceIds, largePersonGroupId: self.largepersonGroupId+"\(self.curLpgNum)", maxNumOfCandiadatesReturned: 1, confidenceThreshold: 0.5, text: text)
+                    self.Identify(faceIds: faceIds, largePersonGroupId: self.cs.largepersonGroupId+"\(self.cs.curLpgNum)", maxNumOfCandiadatesReturned: 1, confidenceThreshold: 0.5, textList: textList)
                 }
                 
             } catch {
@@ -506,16 +401,18 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         task.resume()
     }
     
+    
+    // generates the text for the face with given attributes
     func faceText(faceAttributes: [String: Any]) -> String {
-        let age = Int((faceAttributes["age"] as? Float)!)
+        let age = Int((faceAttributes["age"] as? Double)!)
         let gender = faceAttributes["gender"] as? String
-        let smile = faceAttributes["smile"] as? Float
+        let smile = faceAttributes["smile"] as? Double
         let facialHair = faceAttributes["facialHair"] as? [String: Any]
-        let beard = facialHair!["beard"] as? Float
+        let beard = facialHair!["beard"] as? Double
         let glasses = faceAttributes["glasses"] as? String
         let emotions = faceAttributes["emotion"] as? [String: Any]
         let hair = faceAttributes["hair"] as? [String: Any]
-        let bald = hair!["bald"] as? Float
+        let bald = hair!["bald"] as? Double
         let invisibleHair = hair!["invisible"] as? Bool
         let hairColors = hair!["hairColor"] as? [[String: Any]]
         var text = "a \(String(describing: age)) year old " + gender!
@@ -523,16 +420,16 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         if (glasses! != "NoGlasses") {text += " with \(String(describing: glasses!))"}
         if (bald! < 0.5 && invisibleHair! == false) {
             let hairColor = hairColors?.max(by: { (x, y) -> Bool in
-                let xConf = x["confidence"] as? Float
-                let yConf = y["confidence"] as? Float
+                let xConf = x["confidence"] as? Double
+                let yConf = y["confidence"] as? Double
                 return xConf! < yConf!
             })!["color"] as? String
-            text += " and \(String(describing: hairColor!)) hair "}
+            text += " with \(String(describing: hairColor!)) hair "}
         if (smile! > 0.5) {text += " smiling "}
         else {
             let emotion = emotions?.max(by: { (x, y) -> Bool in
-                let xval = x.value as? Float
-                let yval = y.value as? Float
+                let xval = x.value as? Double
+                let yval = y.value as? Double
                 return xval! < yval!
             })?.key
             //if emo
@@ -541,8 +438,166 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         return text
     }
     
+    // identifies the faces in faceIds with the stored and trained persons in the largePersonGroupId
+    // textList is a list generated for each face from face API describing the face
+    func Identify(faceIds: [String] , largePersonGroupId: String , maxNumOfCandiadatesReturned: Int , confidenceThreshold: Float, textList: [String]) {
+        print("identifying")
+        var request = cs.postRequest(url: cs.urlFace+"/identify", subKey: cs.subKeyFace, method: "POST", contentType: "application/json")
+        let session = URLSession.shared
+        print(faceIds)
+        let body : [String: Any] = ["faceids":faceIds,
+                                    "largePersonGroupId": largePersonGroupId,
+                                    "maxNumOfCandidatesReturned": maxNumOfCandiadatesReturned,
+                                    "confidenceThreshold": confidenceThreshold]
+        let bodyData = try? JSONSerialization.data(withJSONObject: body, options: [])
+        request.httpBody = bodyData
+        let task = session.dataTask(with: request, completionHandler : { (data, response, error) in
+            print("Response: \(String(describing: response))")
+            let strData = NSString(data: data!, encoding: String.Encoding.utf8.rawValue)
+            print("Body: \(String(describing: strData))")
+            guard let data = data, let response = response as? HTTPURLResponse, error == nil && response.statusCode == 200 else {
+                print(error?.localizedDescription ?? "No data")
+                return
+            }
+            if let responseDict = try? JSONSerialization.jsonObject(with: data, options: []) as? [[String: Any]] {
+                var i = 0
+                for face in responseDict! {
+                    let text = textList[i]
+                    let candidates = face["candidates"] as? [[String: Any]]
+                    if (!((candidates?.isEmpty)!) && self.numPeople != 0){
+                        let textSliced = text.split(separator: " ")[7...].joined(separator: " ")
+                        let personID = candidates![0]["personId"] as? String
+                        if let key = self.people[personID!] {
+                            print(key)
+                            let name = key["name"]
+                            if let relation = key["relation"] {
+                                print(relation)
+                                self.speaker.speak(text: "I see your " + relation + " , " + name! + " " + textSliced)
+                            } else {
+                                self.speaker.speak(text: "I see \(name!)" + " " + textSliced)
+                            }
+                        } else {
+                            print("personId: \(personID!) does not exist!")
+                            self.speaker.speak(text: text)
+                        }
+                    }
+                    else{
+                        print("ass34")
+                        //self.speaker.speak(text: text, requiresResponse: false)
+                        print("ass35")
+                        self.recognizeBool=true
+                        self.speaker.speak(text: text+". Do you want to remember this person?", requiresResponse: true)
+                        
+                    }
+                }
+            }
+        })
+        task.resume()
+    }
+    
+    
+    
+    // creates a person with name: name , relation: userData in large person group with id lpg
+    func createPerson(lpg: String, name: String, userData: String) {
+        print("creating person \(name) in \(lpg)")
+        self.cs.isLpgEmpty = false
+        var personId = ""
+        let url = self.cs.urlFace+"/largepersongroups/\(lpg)/persons"
+        let body : [String: String] = ["name": name,
+                                       "userData" : userData]
+        let bodyData = try? JSONSerialization.data(withJSONObject: body, options: [])
+        var request = self.cs.postRequest(url: url, subKey: self.cs.subKeyFace, method: "POST",contentType: "application/json")
+        request.httpBody = bodyData
+        let session = URLSession.shared
+        let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
+            //print("Response: \(String(describing: response))")
+            guard let data = data, let response = response as? HTTPURLResponse, error == nil && response.statusCode == 200 else {
+                print(error?.localizedDescription ?? "No data")
+                return
+            }
+            print(response.statusCode)
+            let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
+            print("Body: \(String(describing: strData))")
+            if let responseDict = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: String] {
+                personId = responseDict!["personId"]!
+                print(personId)
+                self.personIds.append(personId)
+                //print(self.personIds.last)
+                self.numPeople += 1
+                self.people.updateValue(["name" : name, "relation": userData], forKey: personId)
+                self.speaker.speak(text: "hold while I remember \(name)", requiresResponse: false)
+                DispatchQueue.main.async {
+                    // add a face to this person for training
+                    self.addFaceToPerson(lpgId: lpg, personId: personId, userData: userData, targetFace: "", image: self.imageView.image! ,num: 1)
+                }
+                
+            }
+        })
+        task.resume()
+        print(personId)
+    }
+    
+    // add (num) faces to the preson with id personId from the large person group with lpgId from the captured image
+    func addFaceToPerson(lpgId: String, personId: String, userData: String, targetFace: String, image: UIImage, num:Int) {
+        print("adding face to person \(personId)")
+        let url = self.cs.urlFace + "/largepersongroups/\(lpgId)/persons/\(personId)/persistedfaces"
+        var request = self.cs.postRequest(url: url, subKey: self.cs.subKeyFace, method: "POST", contentType: "application/octet-stream")
+        request.httpBody = UIImageJPEGRepresentation(image, 1)
+        let session = URLSession.shared
+        session.dataTask(with: request)
+        let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
+            //print("Response: \(String(describing: response))")
+            guard let data = data, let response = response as? HTTPURLResponse, error == nil && response.statusCode == 200 else {
+                print(error?.localizedDescription ?? "No data")
+                self.speaker.speak(text: "did not detect a face, let me try again")
+                DispatchQueue.main.async {
+                    self.addFaceToPerson(lpgId: lpgId, personId: personId, userData: userData, targetFace: targetFace, image: self.imageView.image! ,num: num)
+                }
+                return
+            }
+            print(response.statusCode)
+            let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
+            print("Body: \(String(describing: strData))")
+            if num != 1 {
+                DispatchQueue.main.async {
+                    self.addFaceToPerson(lpgId: lpgId, personId: personId, userData: userData, targetFace: targetFace, image: self.imageView.image! ,num: num-1)
+                }
+            } else {
+                self.train(lpg: lpgId)
+            }
+        })
+        task.resume()
+    }
+    
+    // trains the large person group lpg with the persons inside it
+    // (there has to be persons created in the group with at list one face for each person)
+    func train(lpg: String) {
+        print("training \(lpg)")
+        let url = self.cs.urlFace+"/largepersongroups/\(lpg)/train"
+        var request = URLRequest(url: URL(string: url)!)
+        request.httpMethod = "POST"
+        request.addValue(self.cs.subKeyFace, forHTTPHeaderField: "Ocp-Apim-Subscription-Key")
+        let session = URLSession.shared
+        let task = session.dataTask(with: request) { (data, response, error) in
+            //print("Response: \(String(describing: response))")
+            guard error == nil else {
+                print(error?.localizedDescription ?? "No data")
+                return
+            }
+            if let response = response as? HTTPURLResponse, response.statusCode == 202 {
+                print("train successful")
+                self.speaker.speak(text: "I will now remember \(self.name)")
+            }
+            
+        }
+        task.resume()
+    }
+    
+    
+    
+    // sends a request to Vision API for text detection (OCR)
     func OCR(image: UIImage){
-        var request = self.postRequest(url: urlVision+"/ocr?en", subKey: subKeyVision , method: "POST", contentType: "application/octet-stream")
+        var request = self.cs.postRequest(url: self.cs.urlVision+"/ocr?en", subKey: self.cs.subKeyVision , method: "POST", contentType: "application/octet-stream")
         request.httpBody = UIImageJPEGRepresentation(image, 1)
         let session = URLSession.shared
         let task = session.dataTask(with: request, completionHandler: {data, response, error -> Void in
@@ -576,88 +631,10 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         
         task.resume()
     }
-
 }
 
-class SpeechDetection {
-    let audioEngine = AVAudioEngine()
-    let speechRecognizer: SFSpeechRecognizer? = SFSpeechRecognizer()
-    
-    var speechResult : String!
-    var imageData: Data!
-    var node: AVAudioInputNode!
-    var request : SFSpeechAudioBufferRecognitionRequest!
-    
-    func requestSpeechAuth() {
-        print("speak11")
-        self.request = SFSpeechAudioBufferRecognitionRequest()
-        print("speak12")
-        print(audioEngine.isRunning)
-        node = audioEngine.inputNode
-        print("speak13")
-        let recordingFormat = node.outputFormat(forBus: 0)
-        print("speak14")
-        node.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
-            self.request.append(buffer)
-        }
-        print("speak15")
-        
-        audioEngine.prepare()
-        print("speak16")
-        do {
-            try audioEngine.start()
-        } catch {
-            return print(error)
-        }
-        let recognizer = SFSpeechRecognizer()
-        recognizer?.recognitionTask(with: self.request) { (results, error) in
-            
-            
-            if let error = error {
-                print("There was an error: \(error)")
-            } else {
-                //print(results?.bestTranscription.formattedString as Any)
-                //print(results?.isFinal as Any)
-                self.speechResult = results?.bestTranscription.formattedString
-            }
-        }
-    }
-}
 
-class Speaker: NSObject {
-    let synth = AVSpeechSynthesizer()
-    //let viewController = ViewController()
-    let speechRecognizer = SpeechDetection()
-    
-    var requiresResponse = false
-    
-    override init() {
-        super.init()
-        synth.delegate = self
-    }
-    
-    func speak(text: String, requiresResponse: Bool = false) {
-        self.requiresResponse = requiresResponse
-        let utterance = AVSpeechUtterance(string: text)
-        synth.speak(utterance)
-    }
-}
 
-extension Speaker: AVSpeechSynthesizerDelegate {
-    
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        print("all done")
-        if requiresResponse {
-            if speechRecognizer.audioEngine.isRunning{
-                speechRecognizer.audioEngine.stop()
-                speechRecognizer.audioEngine.inputNode.removeTap(onBus: 0)
-                speechRecognizer.request.endAudio()
-            }
-            speechRecognizer.requestSpeechAuth()
-        }
-        
-    }
-}
 
 
 
