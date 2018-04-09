@@ -20,6 +20,8 @@ class SpeechDetection {
     var node: AVAudioInputNode!
     var request : SFSpeechAudioBufferRecognitionRequest!
     
+    var restartedRec = false
+    
     func requestSpeechAuth(caption: UILabel) {
         if audioEngine.isRunning {
             self.stopDetection()
@@ -58,17 +60,24 @@ class SpeechDetection {
             } else {
                 if let res = results?.bestTranscription.formattedString {
                     print(res)
-                    caption.text = res
+                    if let sr = self.speechResult, self.restartedRec  {
+                        self.speechResult = sr + res + " "
+                        self.restartedRec = false
+                    } else {
+                        self.speechResult = res
+                    }
+                    caption.text = self.speechResult
                     // once in about every minute recognition task finishes so we need to set up a new one to continue recognition
                     if results?.isFinal == true {
                         print("restarting recognition")
                         self.request = nil
                         self.task = nil
+                        self.restartedRec = true
                         self.startRecognition(caption: caption)
                     }
                     
                     //print(results?.isFinal as Any)
-                    self.speechResult = res
+                    
                 }
                 
             }
@@ -77,22 +86,13 @@ class SpeechDetection {
     
     
     func stopDetection() {
-        DispatchQueue.main.async {
-            print("ass1")
-            
-            self.audioEngine.inputNode.removeTap(onBus: 0)
-            print("ass2")
-            self.audioEngine.inputNode.reset()
-            print("ass3")
-            self.audioEngine.stop()
-            print("ass4")
-            self.request.endAudio()
-            print("ass5")
-            self.task.cancel()
-            print("ass6")
-            self.task = nil
-            print("ass7")
-            self.request = nil
-        }
+        print("stopDetection")
+        self.audioEngine.inputNode.removeTap(onBus: 0)
+        self.audioEngine.inputNode.reset()
+        self.audioEngine.stop()
+        self.request.endAudio()
+        self.task.cancel()
+        self.task = nil
+        self.request = nil
     }
 }

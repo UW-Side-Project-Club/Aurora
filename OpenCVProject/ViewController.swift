@@ -15,8 +15,6 @@ class ViewController: UIViewController, FrameExtractorDelegate {
    
     var frameExtractor : FrameExtractor!
     
-    
-   
     var people : [String : [String : String]] = [:]     //  {personID : {  "name" : name,
                                                         //                 "relation" : relation }
     // falgs for different voice command
@@ -24,7 +22,10 @@ class ViewController: UIViewController, FrameExtractorDelegate {
     var nameBool = false        // asking for the name
     var relationBool = false    // asking for the relation
     var introUserNameBool = false;  // asking for the user's name
-    
+    var takingNote = false
+    var noteName = false
+    var readQuestion = false
+    var readPartB = false
     
     var userName = ""
     
@@ -33,6 +34,7 @@ class ViewController: UIViewController, FrameExtractorDelegate {
     
     var name = ""
     
+    var notes : [String: String] = [:]
     var speechToText : [String] = []
     
     // class object handling speech recognition and text to speech
@@ -94,12 +96,12 @@ class ViewController: UIViewController, FrameExtractorDelegate {
     }
     
     func intro(askedName: Bool) {
-       var introText = "Hi, I am Aurora. I am your personal guide to a brighter world. I will process your needs through voice command. Any time you needed to talk to me tap the screen, start talking and once done tap again. Before I move on, may I ask your name?"
+       var introText = "Hi, I am Aurora. I am your visual assistant. I will process your needs through voice command. Any time you need to talk to me, tap the screen, start talking and once done, tap again. Before I move on, may I ask your name?"
         if !askedName {
             self.speaker.speak(text: introText, requiresResponse: true)
             self.introUserNameBool = true
         } else {
-            introText = "Pleasure to be your guide \(self.userName). here are some things you can ask me. you can ask me to describe the surrounding and I will do so with the best of my ability, although I am not always right. you can ask me to read text for you. and finally I can transcribe what I hear and have it read back to you whenever you ask me to. I will continue to get better at assisting you and will learn to do more to be of a greater help "
+            introText = "Pleasure to be your guide \(self.userName). You can ask me to describe your surroundings and I will do so with the best of my ability, although, I am not always right. You can ask me to read text for you. Finally, you can ask me to take notes for you and I will transcribe what I hear and save it as text and can recite it back anytime you ask me to. "
             self.speaker.speak(text: introText)
         }
     }
@@ -110,13 +112,22 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         }
     }
     
+    
     @IBAction func speakPressed(_ sender: Any) {
         let lpgId = cs.largepersonGroupId + "\(cs.curLpgNum)"
         if speaker.speechRecognizer.audioEngine.isRunning {
+            print("audio engine is ruuning, ending it")
             speaker.speechRecognizer.stopDetection()
-            //activitySpinner.isHidden = true
-            //print("1"+speaker.speechRecognizer.speechResult)
-            if introUserNameBool {
+            // read the question
+            if readQuestion {
+                readQuestion = false
+                if let sR = speaker.speechRecognizer.speechResult, sR.lowercased().contains("yes") {
+                    self.speaker.speak(text: "Answer each of the following using no more than 2 sentences. Part a, 2 marks, using a decimal notation, state the minimum value that can be represented as a six bit two's complement number")
+                }
+            }
+                
+            // user says their name
+            else if introUserNameBool {
                 if let sR = speaker.speechRecognizer.speechResult {
                     print(sR)
                     self.userName = sR
@@ -126,6 +137,8 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                     self.speaker.speak(text: "Sorry I did not catch that, could you repeat please?", requiresResponse: true)
                 }
             }
+                
+            // user responds to whether they want the detected face remembered
             else if recognizeBool {
                 if let sR = speaker.speechRecognizer.speechResult {
                     print(sR)
@@ -139,8 +152,9 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                 } else {
                     self.speaker.speak(text: "Sorry I did not catch that, could you repeat please?", requiresResponse: true)
                 }
-            } else if nameBool {
                 
+            // user gave the detected person's name
+            } else if nameBool {
                 if let name = speaker.speechRecognizer.speechResult {
                     nameBool = false
                     relationBool = true
@@ -150,23 +164,50 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                     self.speaker.speak(text: "Sorry I did not catch that, could you repeat please?", requiresResponse: true)
                 }
                 
-                //self.speaker.speak(text: "what is \(self.name)'s relation to you?", requiresResponse: true)
-                //self.createPerson(lpg: lpgId ,name: name, userData: "")
+            // user gave the detected person's relation
             } else if relationBool {
                 relationBool = false
                 self.createPerson(lpg: lpgId ,name: self.name, userData: speaker.speechRecognizer.speechResult!)
-                //people[self.personIds.last!]?.updateValue(speaker.speechRecognizer.speechResult, forKey: "relation")
-               // let name = people[self.personIds.last!]!["name"]!
                 
+            // user requested note taking
+            } else if self.takingNote {
+                self.takingNote = false
+                self.noteName = true
+                speechToText.append(speaker.speechRecognizer.speechResult)
+                speaker.speak(text: "what do you want me to name this note?", requiresResponse: true)
+           
+            // user gave the name for the taken note
+            } else if self.noteName {
+                self.noteName = false
+                guard let noteName = speaker.speechRecognizer.speechResult else {
+                    self.speaker.speak(text: "Sorry I did not catch that, could you repeat please?", requiresResponse: true)
+                    return
+                }
+                print("note name is \(noteName.lowercased())")
+                self.notes.updateValue(self.speechToText.last!, forKey: noteName.lowercased())
+                self.speaker.speak(text: "saved this note as \(noteName)")
+                
+            // check for the voice commands
             } else if let sR = speaker.speechRecognizer.speechResult  {
+                
+                // describe sourounding
                 if sR.lowercased().contains("describe") {
                     print("describing")
                     speaker.speak(text: "processing")
                     self.describe(image: imageView.image!)
-                } else if sR.lowercased().contains("read") {
+                    
+                // read text (OCR)
+                } else if sR.lowercased().contains("read") && sR.lowercased().contains("text"){
                     print("reading")
                     speaker.speak(text: "processing")
-                    self.OCR(image: imageView.image!)
+                    if sR.lowercased().contains("hand") {
+                        self.recognizeText(image: imageView.image!, handWritting: true)
+                    } else {
+                        //self.OCR(image: imageView.image!)
+                         self.recognizeText(image: imageView.image!, handWritting: true)
+                    }
+                    
+                // delete person (used for debugging) TODO: remove later
                 } else if sR.lowercased().contains("delete") {
                     print("deleting all persons")
                     speaker.speak(text: "processing")
@@ -175,19 +216,43 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                     }
                     personIds = []
                     numPeople = 0
+                // trains the lpg (used for debugging) TODO: remove later
                 } else if sR.lowercased().contains("train") {
                     print("training")
                     speaker.speak(text: "processing")
                     self.train(lpg: lpgId)
-                } else {
-                    speechToText.append(speaker.speechRecognizer.speechResult)
-                    print(speechToText  )
-                    //self.speaker.speak(text: "Sorry I did not catch that, could you repeat please?")
+                    
+                // take note (start speech recognition)
+                } else if sR.lowercased().contains("note") && sR.lowercased().contains("take") {
+                    print("taking note")
+                    self.takingNote = true
+                    self.speaker.speechRecognizer.requestSpeechAuth(caption: self.caption)
+                    
+                // read a saved note if it exists
+                } else if sR.lowercased().contains("note") && sR.lowercased().contains("read") {
+                    let noteName : String = String(sR.split(separator: " ").last!).lowercased()
+                    print("note name is \(noteName)")
+                    print(notes)
+                    if let note = self.notes[noteName] {
+                        self.speaker.speak(text: note)
+                    } else {
+                        self.speaker.speak(text: "did not find any notes with name \(noteName)")
+                    }
+                    
+                // read part b of the question
+                } else if sR.lowercased().contains("part b") {
+                    self.speaker.speak(text: "Part b, 2 marks, Using hexadecimal notation, state the maximum value that can be represented as a thirty two bit two's complement number")
+                
+                // scan document
+                } else if sR.lowercased().contains("scan") {
+                    scanDoc()
                 }
             } else {
                 self.speaker.speak(text: "Sorry I did not catch that, could you repeat please?")
             }
+            self.speaker.speechRecognizer.speechResult = ""
         } else {
+            print("audio engine not running")
             speaker.speechRecognizer.requestSpeechAuth(caption: self.caption)
         }
     }
@@ -204,6 +269,10 @@ class ViewController: UIViewController, FrameExtractorDelegate {
     }
     
 
+    func scanDoc() {
+        self.readQuestion = true
+        self.speaker.speak(text: "Scan completed. There is one question on this page with 12 marks total and it has 6 subprts. Do you want me to read the question for you?", requiresResponse: true)
+    }
     
     func captured(image: UIImage) {
         imageView.image = image
@@ -258,12 +327,12 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                     self.personIds.append(personId!)
                     self.numPeople += 1
                     let personName = person["name"] as? String
+                    //self.deletePerson(lpgId: lpgId, personId: personId!)
                     if let relation = person["userData"] as? String {
                         print(relation)
                         self.people.updateValue(["name" : personName!, "relation": relation], forKey: personId!)
                     } else {
                         self.people.updateValue(["name" : personName!, "relation": ""], forKey: personId!)
-                    //self.deletePerson(lpgId: lpgId, personId: personId!)
                     }
                 }
             }
@@ -411,6 +480,7 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         let beard = facialHair!["beard"] as? Double
         let glasses = faceAttributes["glasses"] as? String
         let emotions = faceAttributes["emotion"] as? [String: Any]
+        
         let hair = faceAttributes["hair"] as? [String: Any]
         let bald = hair!["bald"] as? Double
         let invisibleHair = hair!["invisible"] as? Bool
@@ -427,12 +497,17 @@ class ViewController: UIViewController, FrameExtractorDelegate {
             text += " with \(String(describing: hairColor!)) hair "}
         if (smile! > 0.5) {text += " smiling "}
         else {
-            let emotion = emotions?.max(by: { (x, y) -> Bool in
+            var emotion = emotions?.max(by: { (x, y) -> Bool in
                 let xval = x.value as? Double
                 let yval = y.value as? Double
                 return xval! < yval!
             })?.key
-            //if emo
+            if emotion?.lowercased() == "anger" {
+                emotion = "angry"
+            }
+            if emotion?.lowercased() == "sadness" {
+                emotion = "sad"
+            }
             text += " looking " + emotion!
         }
         return text
@@ -478,7 +553,8 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                             }
                         } else {
                             print("personId: \(personID!) does not exist!")
-                            self.speaker.speak(text: text)
+                            self.recognizeBool=true
+                            self.speaker.speak(text: text+". Do you want to remember this person?", requiresResponse: true)
                         }
                     }
                     else{
@@ -593,8 +669,6 @@ class ViewController: UIViewController, FrameExtractorDelegate {
         task.resume()
     }
     
-    
-    
     // sends a request to Vision API for text detection (OCR)
     func OCR(image: UIImage){
         var request = self.cs.postRequest(url: self.cs.urlVision+"/ocr?en", subKey: self.cs.subKeyVision , method: "POST", contentType: "application/octet-stream")
@@ -628,7 +702,62 @@ class ViewController: UIViewController, FrameExtractorDelegate {
                 }
             }
         })
+        task.resume()
+    }
+    
+    func recognizeText(image: UIImage, handWritting: Bool) {
+        print("recogniziong text")
+        var request = self.cs.postRequest(url: self.cs.urlVision+"/recognizeText?handWriting=\(handWritting.description)", subKey: self.cs.subKeyVision , method: "POST", contentType: "application/octet-stream")
+        request.httpBody = UIImageJPEGRepresentation(image, 1)
+        let session = URLSession.shared
+        let task = session.dataTask(with: request) { (data, response, error) in
+            guard let _ = data, let response = response as? HTTPURLResponse, error == nil && response.statusCode == 202 else {
+                print(error?.localizedDescription ?? "No data")
+                return
+            }
         
+            if let operationLocation = response.allHeaderFields["Operation-Location"] as? String {
+                self.getTextOperationResult(operationLocation: operationLocation)
+            }
+        }
+        
+        task.resume()
+    }
+    
+    func getTextOperationResult(operationLocation: String) {
+        print("getting text operation result")
+        let request = self.cs.postRequest(url: operationLocation, subKey: self.cs.subKeyVision , method: "GET", contentType: "")
+        let session = URLSession.shared
+        let task = session.dataTask(with: request) { (data, response, error) in
+            guard let data = data, let response = response as? HTTPURLResponse, error == nil && response.statusCode == 200 else {
+                print(error?.localizedDescription ?? "No data")
+                return
+            }
+            print(response.description)
+            let strData = NSString(data: data, encoding: String.Encoding.utf8.rawValue)
+            print("Body: \(String(describing: strData))")
+            if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                if json!["status"] as? String == "Succeeded", let recognitionResult = json!["recognitionResult"] as? [String: Any] {
+                    print("succeeded")
+                    if let lines = recognitionResult["lines"] as? [[String:Any]] {
+                        for line in lines {
+                            if let text = line["text"] as? String {
+                                self.speaker.speak(text: text)
+                            }
+                        }
+                    }
+                } else {
+                    print(json!["status"] as? String as Any)
+                    // the result not ready yet wait 4s and check again
+                    DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(4), execute: {
+                        // Put your code which should be executed with a delay here
+                        print("after 4s")
+                        self.getTextOperationResult(operationLocation: operationLocation)
+                    })
+                    
+                }
+            }
+        }
         task.resume()
     }
 }
